@@ -1,32 +1,396 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+/*
+Kiara Barias
+Professor Maryash
+CSCI 135
+Project 2
+Gets word from user; reports the pronunciation of the word; words with same pronunciation; words you can get by adding one phoneme to userword;
+words you can get by removing one phoneme in userword; words you can get by replacing one phoneme in userword;
+*/
+#include <iostream>
+#include <cstdlib>
+#include <fstream>
+#include <string>
+#include <cctype>
+using namespace std;
+void splitOnSpace(string s, string & before, string & after)
+{
+	before = "";
+	after = "";
+	int j = 0;
+	while(j < s.size() && not isspace(s[j]))
+	{
+		before += s[j];
+		j++;
+	}
+	j++;
+	while(j < s.size())
+	{
+		after += s[j];
+		j++;
+	}
+}
+string Word2Up(string userword)  //function to turn letters in user-word into uppercase to be read by file
+{
+	string uppercaseS;
+	for(int i=0; i<userword.length(); i++)  //for each character in userword
+	{
+		char c = userword[i];
+		if(isalpha(c))
+		{
+			uppercaseS += toupper(c);  //if the character is a letter make sure to turn it into uppercase
+		}
+		else
+		{
+			uppercaseS += c;
+		}
+	}
+	return uppercaseS;
+}
+bool checking4Char(string inup)  //function to check if word entered contains any special characters
+{
+	bool checkC = true;
+	for(int i=0; i<inup.length(); i++)
+	{
+		char c = inup[i];
+		if(c!= 39 && !isalpha(c))  //if its not an apostrophe and not a letter than not a good input
+		{
+			checkC = false;
+			break;
+		}
+	}
+	return checkC;
+}
+string pronunciationF(string inup) //function to get pronunciation of word
+{
+	ifstream dict("cmudict.0.7a");   //file read in
+	if (dict.fail())
+	{
+		cerr<<"File cannot be opened for reading."<<endl;
+		exit(1);
+	}
+	string words;
+	string pronunciation;
+	bool wordfound = false;
+	while(dict >> words )  //looks through file 
+	{
+		if(words==inup)  //if the word is found get the whole line and return pronunciation
+		{
+			wordfound = true;
+			getline(dict, pronunciation); //if current word being looked at is the same as user-entered word 
+		}  
+	}
+	if(wordfound == false)  
+	{
+		cout << "Not found" <<endl;
+		exit(1);
+	}
+	string nsPronunciation;  //gets rid of two spaces before the actual pronunciation
+	for (int j =2; j<pronunciation.length(); j++)
+	{
+		nsPronunciation +=pronunciation[j]; 
+	}
+	return nsPronunciation;
+}
+string indenticalPro(string inup, string pronunciation) //function to get identical pronunciation of word
+{
+	ifstream dict("cmudict.0.7a");   //file read in
+	if (dict.fail())
+	{
+		cerr<<"File cannot be opened for reading."<<endl;
+		exit(1);
+	}
+	bool pronunciationfound = false; 
+	string wholeline, word, sandp, space, actpronunciation;
+	string identical;  //puts word with identical pronunciation in a string
+	while(getline(dict, wholeline))  //as it goes through file read in the wholeline
+	{
+		splitOnSpace(wholeline, word, sandp);  //get the word in the line and pronunciation with a space in front
+		splitOnSpace(sandp, space, actpronunciation); //to get rid of space in front of pronunciation run it through splitOnSpace again
+		if(word!=inup && actpronunciation == pronunciation) //check if the pronunciation is the same, if it is check if the word is the same as the entered word
+		{
+			pronunciationfound = true; 
+			identical+= word + " ";  //if not then it is a new word and add it to the string
+		}
+	}
+	if(pronunciationfound == false)
+	{
+		identical = "";
+	}
+	return identical;
+}
+int countingphonemes(string pronunciation)  //function to get number of phonemes for word
+{
+	int countpho = 0;
+	for (int i = 0; i < pronunciation.length(); i++)
+	{
+		char k = pronunciation[i];
+		if(isspace(k))  //whenever it sees a space in the string means there is a phoneme
+		{
+			countpho++;
+		}
+	}
+	return countpho+1;
+}
+bool ADDCOMPARE(string Pro, string pronunciation) //function to check if there is only one difference in phonemes (1 added)
+{
+	string before, after, b, a;  //split the two strings to compare the first phoneme
+	splitOnSpace(pronunciation,before, after);
+	splitOnSpace(Pro, b, a );
+	int counter = 0;
+	bool onegreater = true;
+	int NumWordPho = 0;
+	while(!after.empty() && !a.empty())
+	{  //while there is stuff in the two strings
+		
+		if(before == b)   //check if the phoneme being looked at split on space both strings
+		{
+			splitOnSpace(after, before, after);
+			splitOnSpace(a, b, a);
+		}
+		else
+		{
+			counter++; //if the phonemes are not the same, split on space the pronunciation of the word in the file
+			splitOnSpace(a, b, a);
+		}
+	}
+	if(after.empty()) // if after becomes empty 
+		{
+			if(before != b)
+			{
+				counter++;
+				if(before == a)
+				{
+					counter--;
+				}
+				NumWordPho = countingphonemes(a);
+				counter+= NumWordPho;
+			}
+		}
+	
+	if(counter > 1)
+	{
+		onegreater = false;
+	}
+return onegreater;
+}
+string ADDPHONEME(string inup, int numofphonemes, string pronunciation) //function that gets words with one phoneme higher than the userword
+{ //takes in the userword, takes in the number of phonemes that word has
+	ifstream dict("cmudict.0.7a");   //file read in
+	if (dict.fail())
+	{
+		cerr<<"File cannot be opened for reading."<<endl;
+		exit(1);
+	}
+	int NumWordPho = 0;
+	string line, word, spacePro, space, Pro;
+	string OneUpPho;
+	bool CharCheckWord;
+	bool onlyone = false;
+	while(getline(dict, line)) //for each line in file reads in the whole line,
+	{
+		splitOnSpace(line, word, spacePro); //for each line take the whole line split it into the actual word, and the pronunciation with the space in the front
+		splitOnSpace(spacePro, space, Pro); //then takes pronunciation with space in the front, splits it into the space and the actual pronunciation
+		NumWordPho = countingphonemes(Pro); //counts the number of phonemes in the actual pronunciation
+		if (NumWordPho == numofphonemes+1 && word!=inup) //checks if the number of phonemes in the checked word is one greater than the userword, and checks if word is not the userword
+		{
+			CharCheckWord = checking4Char(word);
+			if(CharCheckWord == false)  //makes sure word doesn't have any characters other than letters or ''
+			{
+				OneUpPho += "";
+			}
+			else  //if doesn't have weird characters 
+			{
+				 onlyone = ADDCOMPARE(Pro, pronunciation); //calls function to see if there is just one added phoneme
+				 if(onlyone ==true)
+				 {
+				 	OneUpPho += word + " ";  //if just one added phoneme add to string
+				 }	
+			}
+		}
+	}
+	return OneUpPho;  //returns string with all words with same amount of phonemes
+}
+bool REPLACECOMPARE(string Pro, string pronunciation) //function to check if there is only one difference in words with same amuount of phonemes
+{
+	string before, after, b, a;
+	splitOnSpace(pronunciation, before, after);
+	splitOnSpace(Pro, b, a );
+	int counter = 0;
+	bool onediff = true;
+	int NumWordPho = 0;
+	while(!after.empty() && !a.empty())
+	{
+		
+		if(before == b)   
+		{
+			splitOnSpace(after, before, after);  
+			splitOnSpace(a, b, a);     //if phonemes are the same split on space both of the strings
+			
+		}
+		else
+		{
+			counter++; 
+			splitOnSpace(after, before, after);  //if phonemes are not the same, split on space both of them because the rest of the phonemes should be aligned, except for the one that was replaced
+			splitOnSpace(a, b, a);
+		}
+	}
+	if(after.empty())
+		{
+			if(before != b)
+			{
+				counter++;
+			}
+		}
+	
+	if(counter > 1)
+	{
+		onediff = false;
+	}
+return onediff;
+}
+string REPLACE(string inup, int numofphonemes, string pronunciation) //function that gets words with the same amount of phonemes as the userword
+{ 
+	ifstream dict("cmudict.0.7a");   //file read in
+	if (dict.fail())
+	{
+		cerr<<"File cannot be opened for reading."<<endl;
+		exit(1);
+	}
+	int NumWordPho = 0;
+	string line, word, spacePro, space, Pro;
+	string replaced;
+	bool CharCheckWord;
+	bool onlyone = false;
+	while(getline(dict, line)) //for each line in file reads in the whole line,
+	{
+		splitOnSpace(line, word, spacePro); //for each line take the whole line split it into the actual word, and the pronunciation with the space in the front
+		splitOnSpace(spacePro, space, Pro); //then takes pronunciation with space in the front, splits it into the space and the actual pronunciation
+		NumWordPho = countingphonemes(Pro); //counts the number of phonemes in the actual pronunciation
+		if (NumWordPho == numofphonemes && word!=inup && Pro!= pronunciation) //checks if the number of phonemes in the checked word is the same as userword, and checks if word is not the userword, and makes sure identical pronunciations are not included
+		{
+			CharCheckWord = checking4Char(word);
+			if(CharCheckWord == false)  //makes sure word doesn't have any characters other than letters or ''
+			{
+				replaced += "";
+			}
+			else  //if doesn't have weird characters 
+			{
+				 onlyone = REPLACECOMPARE(Pro, pronunciation);
+				 if(onlyone ==true)
+				 {
+				 	replaced += word + " ";
+				 }	
+			}
+		}
+	}
+	return replaced;  //returns string with all words with same amount of phonemes
+}
+bool REMOVINGPHON(string Pro, string pronunciation) //function to check if there is only one difference in phonemes (1 less)
+{
+	string before, after, b, a;
+	splitOnSpace(pronunciation, before, after);
+	splitOnSpace(Pro, b, a );
+	int counter = 0;
+	bool oneLESS = true;
+	int NumWordPho = 0;
+	while(!after.empty() && !a.empty())
+	{ 
+		
+		if(before == b) 
+		{
+			splitOnSpace(after, before, after);  //split on space both strings if the first phoneme is the same
+			splitOnSpace(a, b, a);
+			
+		}
+		else
+		{
+			counter++;
+			splitOnSpace(after, before, after);  //split on space user pronunciation if they are not the same
+		}
+	}
+	if(a.empty())
+		{
+			counter++;
+			if(after == b || before == b)  
+			{
+				counter--;
+			}
+			
+			else{
+			NumWordPho = countingphonemes(after);
+			counter+= NumWordPho;
+			}
+		}
+	
+	if(counter > 1)
+	{
+		oneLESS = false;
+	}
+return oneLESS;
+}
+string REMOVEPHO(string inup, int numofphonemes, string pronunciation) //function that gets words with one less phoneme than userword
+{ 
+	ifstream dict("cmudict.0.7a");   //file read in
+	if (dict.fail())
+	{
+		cerr<<"File cannot be opened for reading."<<endl;
+		exit(1);
+	}
+	int NumWordPho = 0;
+	string line, word, spacePro, space, Pro;
+	string removing;
+	bool CharCheckWord;
+	bool onlyone = false;
+	string identical;
+	while(getline(dict, line)) //for each line in file reads in the whole line,
+	{
+		splitOnSpace(line, word, spacePro); //for each line take the whole line split it into the actual word, and the pronunciation with the space in the front
+		splitOnSpace(spacePro, space, Pro); //then takes pronunciation with space in the front, splits it into the space and the actual pronunciation
+		NumWordPho = countingphonemes(Pro); //counts the number of phonemes in the actual pronunciation
+		if (NumWordPho == numofphonemes-1 && word!=inup) //checks if the number of phonemes in the checked word is one less than the userword, and checks if word is not the userword
+		{
+			CharCheckWord = checking4Char(word);
+			if(CharCheckWord == false)  //makes sure word doesn't have any characters other than letters or ''
+			{
+				removing += "";
+			}
+			else  //if doesn't have weird characters 
+			{
+				 onlyone = REMOVINGPHON(Pro, pronunciation);
+				 if(onlyone ==true)
+				 {
+				 	removing += word + " ";
+				 	// cout << OneUpPho;  //might have to add else for false statement 
+				 }	
+			}
+		}
+	}
+	return removing;  //returns string with all words with same amount of phonemes
+}
+int main()
+{
+	string words;
+	string userword;
+	cout << "Enter a word: "<< endl;
+	cin >> userword;
+	string inup = Word2Up(userword);  
+	bool check4Char = checking4Char(inup);  
+	if(check4Char == false)
+	{
+		cout << "Not found" << endl;
+		exit(1);
+	}
+	string pronunciation = pronunciationF(inup); 
+	cout << "Pronunciation    : " << pronunciation << endl;
+	cout << endl;
+	string identical = indenticalPro(inup, pronunciation);
+	cout << "Identical        : " << identical <<endl;
+	int numofphonemes = countingphonemes(pronunciation);
+	string lookatwords = ADDPHONEME(inup, numofphonemes, pronunciation);
+	cout << "Add phoneme      : "<<lookatwords << endl;
+	string removepho = REMOVEPHO(inup, numofphonemes, pronunciation);
+	cout << "Remove phoneme   : "<< removepho << endl;
+	string replacedpho = REPLACE(inup, numofphonemes, pronunciation);
+	cout << "Replace phoneme  : "<< replacedpho << endl;
+return 0;
+}
